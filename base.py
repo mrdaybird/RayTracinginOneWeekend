@@ -18,7 +18,7 @@ viewport_height = 2
 viewport_width = ASPECT_RATIO * viewport_height
 focal_length = 1
 
-origin = Vector3([0,0,-1])
+origin = np.array([0,0,-1])
 horizontal = Vector3([viewport_width, 0, 0])
 vertical = Vector3([0,viewport_height,0])
 lower_left_corner = origin - horizontal / 2 - vertical/2 - Vector3([0,0,focal_length])  
@@ -44,23 +44,14 @@ def color_rgb(r,g,b):
 
 image_array = []
 t1 = perf_counter()
-for i in np.linspace(-viewport_height/2, viewport_height/2, HEIGHT):
-    row = []
-    _remaining_lines = HEIGHT - int((i/viewport_height + 1/2)*(HEIGHT)) 
-    print(f'Lines remaining: {_remaining_lines}', file=log_file, flush=True)
-    for j in np.linspace(-viewport_width/2, viewport_width/2, WIDTH):
-        # r = j/(WIDTH -1)
-        # g = i/(HEIGHT -1)
-        # b = 0.25
-        # row.append([r,g,b])
 
-        point = Vector3([j, i, 0])
-
-        r = ray(origin, point - origin)
-        pixel_color = ray_color(r)
-        row.append(pixel_color)
-    image_array.append(row)
-
+x = np.linspace(-viewport_width/2, viewport_width/2, WIDTH)
+y = np.linspace(-viewport_height/2, viewport_height/2, HEIGHT)
+screen = np.stack([np.tile(x, HEIGHT), np.repeat(y, WIDTH), np.zeros(WIDTH * HEIGHT)]).T
+direction_array = screen - origin
+t_array = np.multiply(np.add(direction_array[:, 1],1),0.5)
+colors = ((1-t_array)*np.tile([1.0,1.0,1.0], WIDTH * HEIGHT).reshape(-1, 3).T + (t_array * np.tile([0.5,0.7,1.0], WIDTH*HEIGHT).reshape(-1, 3).T)).T
+image_array = colors.reshape(HEIGHT, WIDTH, 3)
 # Creating a numpy array from [0,1] colored to [0,255]
 image_array = (np.array(image_array) * 255.99).astype(np.uint8)
 im = Image.fromarray(image_array)
