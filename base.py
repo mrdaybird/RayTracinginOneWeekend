@@ -15,6 +15,19 @@ focal_length = 1
 
 origin = np.array([0,0,-1])
 
+def normalize(a : np.ndarray) -> np.ndarray:
+    return ((1/np.linalg.norm(a, axis=1)) * a.T).T
+def ray_color(a : np.ndarray) -> np.ndarray:
+    unit_direction = normalize(a)
+    t_array = np.multiply(np.add(unit_direction[:, 1],1),0.5)
+    colors = ((1-t_array)*np.tile([1.0,1.0,1.0], WIDTH * HEIGHT).reshape(-1, 3).T + 
+                (t_array * np.tile([0.5,0.7,1.0], WIDTH*HEIGHT).reshape(-1, 3).T)).T
+    return colors
+def rgb_color(a : np.ndarray) -> np.ndarray:
+    '''
+     Creating a numpy array from an array of range [0,1] to an array of [0,255]
+    '''
+    return (np.array(a) * 255.99).astype(np.uint8)
 image_array = []
 t1 = perf_counter()
 
@@ -23,13 +36,12 @@ y = np.linspace(-viewport_height/2, viewport_height/2, HEIGHT)
 screen = np.stack([np.tile(x, HEIGHT), np.repeat(y, WIDTH), np.zeros(WIDTH * HEIGHT)]).T
 
 direction_array = screen - origin
-t_array = np.multiply(np.add(direction_array[:, 1],1),0.5)
-colors = ((1-t_array)*np.tile([1.0,1.0,1.0], WIDTH * HEIGHT).reshape(-1, 3).T + 
-            (t_array * np.tile([0.5,0.7,1.0], WIDTH*HEIGHT).reshape(-1, 3).T)).T
-image_array = colors.reshape(HEIGHT, WIDTH, 3)
-# Creating a numpy array from [0,1] colored to [0,255]
+colors = ray_color(direction_array)
 
-image_array = (np.array(image_array) * 255.99).astype(np.uint8)
+image_array = colors.reshape(HEIGHT, WIDTH, 3)
+
+image_array = rgb_color(image_array)
+
 im = Image.fromarray(image_array)
 im.save('image.jpg')        
 
