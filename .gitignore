@@ -1,3 +1,6 @@
 logfile.txt
 playground.py
 temp.txt
+/env
+poetry.lock
+pyproject.toml
