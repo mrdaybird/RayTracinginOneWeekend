@@ -11,7 +11,7 @@ pixels = WIDTH * HEIGHT
 viewport_height = 2
 viewport_width = ASPECT_RATIO * viewport_height
 focal_length = 1
-
+FARAWAY = np.repeat(1000, pixels)
 origin = np.array([0,0,1])
 hittable_spheres = [
     {'center': np.array([0,0,-1]), 'radius': 0.5},
@@ -28,7 +28,8 @@ def hit_sphere(center, radius, origins:np.ndarray, directions:np.ndarray) -> np.
     t2 = (-half_b + np.sqrt(discriminant, where=discriminant>=0))/a
     t = np.where(t1 < 0, t2, t1)
     t = np.where(t < 0, 0, t)
-    return (discriminant >= 0) * t
+    hit = (discriminant > 0) * (t > 0)
+    return np.where(hit, t, FARAWAY)
 
 def normalize(a : np.ndarray) -> np.ndarray:
     return ((1/np.linalg.norm(a, axis=1)) * a.T).T
@@ -38,21 +39,21 @@ def ray_color(origins : np.ndarray, directions : np.ndarray) -> np.ndarray:
     colors = ((1-t_array)*np.tile([1.0,1.0,1.0], pixels).reshape(-1, 3).T + 
                 (t_array * np.tile([0.5,0.7,1.0], pixels).reshape(-1, 3).T)).T
 
-    t_min = np.zeros(pixels)
+    t_min = np.copy(FARAWAY)
     centers_min = np.zeros((pixels, 3))
     radius_min = np.ones(pixels)
     for sphere in hittable_spheres:
         t = hit_sphere(sphere['center'], sphere['radius'], origins, directions)
-        t_min = np.where(t_min <= 0, t, t_min)
-        t_min = np.minimum(t_min, t) + (1-(t*t_min > 0))*t_min
-        new_min = (t == t_min) * (t_min > 0)
-        vector_min = np.repeat(new_min, 3).reshape(-1, 3)
+        new_t = np.minimum(t, t_min)
+        hit = (new_t != t_min)
+        t_min = new_t
+        vector_min = np.repeat(hit, 3).reshape(-1, 3)
         centers_min = (1-vector_min)*centers_min + (vector_min * sphere['center'])
-        radius_min = (1-new_min)*radius_min + (new_min * sphere['radius'])
+        radius_min = (1-hit)*radius_min + (hit * sphere['radius'])
 
-    hits = np.repeat(t_min>0, 3).reshape(-1, 3)
+    hits = np.repeat(t_min<FARAWAY, 3).reshape(-1, 3)
     r_at_t = origins + np.repeat(t_min,3).reshape(-1, 3) * directions
-    N = (r_at_t - centers_min) / np.repeat(radius_min, 3).reshape(-1, 3)
+    N = normalize(r_at_t - centers_min)
     N = 0.5*(N+1)
     colors = (1-hits)*colors + hits*N
     return colors
